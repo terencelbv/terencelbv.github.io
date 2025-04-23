@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map with Coordinates</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+    <style>
+        /* Basic styling for the map container */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif; /* Basic font */
+        }
+        #map {
+            height: 100%; /* Make map fill the body */
+            width: 100%;
+        }
+        .leaflet-popup-content {
+            font-size: 0.8rem; /* Slightly smaller popup text */
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        // Raw coordinate string data provided by the user
+        const rawCoordinatesString = `
+            55.63112760° N12.57678630° E
+            55.62998960° N12.57770920° E
+            55.63053040° N12.57667390° E
+            55.63053040° N12.57667390° E
+            55.63009300° N12.57696450° E
+            55.62973550° N12.57820380° E
+            55.63024560° N12.57721730° E
+            55.63041330° N12.57654450° E
+            55.63009300° N12.57696450° E
+            55.63048620° N12.57579230° E
+            55.63041330° N12.57654450° E
+            55.63079000° N12.57848000° E
+            55.62972560° N12.57852860° E
+            55.63018830° N12.57747430° E
+            55.63009300° N12.57696450° E
+            55.63024560° N12.57721730° E
+            55.62980400° N12.57796500° E
+            55.63009300° N12.57696450° E
+            55.62998960° N12.57770920° E
+            55.63112760° N12.57678630° E
+            55.62796920° N12.64280340° E
+            55.62965070° N12.63824630° E
+            55.62909650° N12.63994400° E
+            55.62900180° N12.64107060° E
+            55.62760960° N12.64548120° E
+            55.62591240° N12.64493990° E
+            55.62701490° N12.65025860° E
+            55.62701490° N12.65025860° E
+            55.62596250° N12.64975960° E
+            55.62812240° N12.65006250° E
+            55.62744830° N12.65065420° E
+            55.62701490° N12.65025860° E
+            55.62798190° N12.65079750° E
+            55.62785840° N12.65145180° E
+            55.62742830° N12.65287680° E
+            55.62778120° N12.65252970° E
+            55.62778120° N12.65252970° E
+            55.62798190° N12.65079750° E
+            55.62877130° N12.64595030° E
+            55.62906960° N12.64622980° E
+            55.62891530° N12.64773710° E
+            55.62891530° N12.64773710° E
+            55.62910990° N12.64491880° E
+            55.62910990° N12.64491880° E
+            55.62830710° N12.65016850° E
+            55.62798190° N12.65079750° E
+            55.62883070° N12.64891500° E
+            55.62936400° N12.64958270° E
+            55.62936400° N12.64958270° E
+            55.62909740° N12.64397860° E
+            55.62891870° N12.64581230° E
+            55.62891870° N12.64581230° E
+            55.62864140° N12.64693230° E
+            55.62891870° N12.64581230° E
+            55.63029050° N12.64334370° E
+            55.63029050° N12.64334370° E
+            55.62981880° N12.64994370° E
+            55.62981880° N12.64994370° E
+            55.67916230° N12.58539550° E
+            55.67916230° N12.58539550° E
+            55.67977250° N12.58545400° E
+            55.67977250° N12.58545400° E
+            55.67984540° N12.58584410° E
+            55.67966080° N12.58641580° E
+            55.68016960° N12.58655050° E
+            55.67995480° N12.58639720° E
+            55.67159300° N12.56389310° E
+            55.67134300° N12.56415600° E
+            55.67193630° N12.59163520° E
+            55.67198170° N12.59108610° E
+            55.69990450° N12.53804330° E
+            55.70028290° N12.53825530° E
+            55.62929960° N12.57950270° E
+            55.69256410° N12.58730660° E
+            55.69304260° N12.58603740° E
+            55.67639490° N12.56813460° E
+            55.67639490° N12.56813460° E
+            55.69929450° N12.57520520° E
+            55.69929450° N12.57520520° E
+        `;
+
+        // Function to parse the coordinate strings and remove duplicates
+        function parseCoordinates(coordString) {
+            const lines = coordString.trim().split('\n');
+            const uniqueCoords = new Set(); // Use a Set to automatically handle duplicates
+            const coordinates = [];
+            // Regex to capture latitude and longitude (assuming N and E)
+            const regex = /(\d+\.\d+)°\s*N(\d+\.\d+)°\s*E/;
+
+            lines.forEach(line => {
+                const match = line.trim().match(regex);
+                if (match) {
+                    const lat = parseFloat(match[1]);
+                    const lon = parseFloat(match[2]);
+                    const coordKey = `${lat},${lon}`; // Create a unique key for the Set
+
+                    // Add to set and array only if it's unique
+                    if (!uniqueCoords.has(coordKey)) {
+                        uniqueCoords.add(coordKey);
+                        coordinates.push([lat, lon]);
+                    }
+                }
+            });
+            return coordinates;
+        }
+
+        // Parse the coordinates
+        const locations = parseCoordinates(rawCoordinatesString);
+
+        // Initialize the map. Set the initial view (e.g., to the first point or a central point)
+        // If there are locations, use the first one as the initial center. Otherwise, default to Copenhagen.
+        const initialCenter = locations.length > 0 ? locations[0] : [55.6761, 12.5683]; // Default to Copenhagen center if no points
+        const map = L.map('map').setView(initialCenter, 13); // Initial zoom level
+
+        // Add a tile layer (map background). OpenStreetMap is a free option.
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Create markers for each location
+        const markers = [];
+        locations.forEach(location => {
+            const lat = location[0];
+            const lon = location[1];
+            const marker = L.marker([lat, lon])
+                .addTo(map)
+                .bindPopup(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`); // Add popup with coordinates
+            markers.push(marker);
+        });
+
+        // Adjust map bounds to fit all markers if there are any
+        if (markers.length > 0) {
+            const group = L.featureGroup(markers); // Create a group of markers
+            map.fitBounds(group.getBounds().pad(0.1)); // Fit map to bounds with a small padding
+        }
+
+        // Handle map resize to ensure it always fits the container
+        window.addEventListener('resize', function() {
+            map.invalidateSize(); // Adjust map size when window resizes
+             if (markers.length > 0) {
+                const group = L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1)); // Re-fit bounds on resize
+            }
+        });
+
+    </script>
+</body>
+</html>
+
